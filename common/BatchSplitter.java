@@ -3,78 +3,102 @@ import java.io.*;
 
 public class BatchSplitter {
 
-    public static void splitFile(String inputFile, String pipelineName, int batchSize) {
-
+    public static void splitFile(String inputFile, int batchSize) {
         int batchId = 1;
-        int lineCount = 0;
+        int totalLineCount = 0;
 
         BufferedReader reader = null;
         BufferedWriter writer = null;
+        File currentBatchFile = null;
+        int currentBatchLineCount = 0;
 
         try {
-            // 🔹 Create directory (MR / MongoDB / Pig / Hive)
-            File dir = new File(pipelineName);
-            if (!dir.exists()) {
-                dir.mkdirs();
-                System.out.println("Created directory: " + pipelineName);
+            File inputFileObj = new File(inputFile);
+            String inputFileName = inputFileObj.getName();
+            String nameWithoutExtension = inputFileName.contains(".") ? 
+                                          inputFileName.substring(0, inputFileName.lastIndexOf('.')) : 
+                                          inputFileName;
+            String baseDirName = nameWithoutExtension + "_" + batchSize;
+            
+            // 🔹 Create Dataset directory inside common folder
+            File datasetDir = new File("Project/common/Dataset");
+            if (!datasetDir.exists()) {
+                datasetDir.mkdirs();
+            }
+            
+            File outputDir = new File(datasetDir, baseDirName);
+            if (!outputDir.exists()) {
+                outputDir.mkdirs();
+                System.out.println("Created directory: " + outputDir.getPath());
             }
 
             reader = new BufferedReader(new FileReader(inputFile));
-
             String line;
 
             while ((line = reader.readLine()) != null) {
-
-                // 🔹 Create new batch file when needed
-                if (lineCount % batchSize == 0) {
-
-                    if (writer != null) {
-                        writer.close();
-                    }
-
-                    String batchFileName = pipelineName + "/batch_" + batchId + ".txt";
-                    writer = new BufferedWriter(new FileWriter(batchFileName));
-
-                    System.out.println("Creating: " + batchFileName);
-
-                    batchId++;
+                // 🔹 Start a new batch file if needed
+                if (currentBatchLineCount == 0) {
+                    // Use a temporary name first, then rename to include final count
+                    currentBatchFile = new File(outputDir, "temp_b" + batchId + ".txt");
+                    writer = new BufferedWriter(new FileWriter(currentBatchFile));
+                    System.out.println("Creating batch " + batchId + "...");
                 }
 
                 writer.write(line);
                 writer.newLine();
+                currentBatchLineCount++;
+                totalLineCount++;
 
-                lineCount++;
+                // 🔹 Close batch file if it reaches batchSize
+                if (currentBatchLineCount == batchSize) {
+                    writer.close();
+                    writer = null;
+                    
+                    // Rename temp file to include final count
+                    File finalFile = new File(outputDir, "b" + batchId + "_" + currentBatchLineCount + ".txt");
+                    currentBatchFile.renameTo(finalFile);
+                    
+                    batchId++;
+                    currentBatchLineCount = 0;
+                }
             }
 
-            // 🔹 Close last writer
+            // 🔹 Handle the last batch if it has remaining lines
             if (writer != null) {
                 writer.close();
+                File finalFile = new File(outputDir, "b" + batchId + "_" + currentBatchLineCount + ".txt");
+                currentBatchFile.renameTo(finalFile);
             }
 
-            System.out.println("\nTotal Records: " + lineCount);
-            System.out.println("Total Batches: " + (batchId - 1));
+            System.out.println("\nTotal Records Processed: " + totalLineCount);
+            System.out.println("Total Batches Created: " + (currentBatchLineCount > 0 ? batchId : batchId - 1));
+            System.out.println("Output location: " + outputDir.getAbsolutePath());
 
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             try {
                 if (reader != null) reader.close();
+                if (writer != null) writer.close();
             } catch (IOException e) {}
         }
     }
 
-    // 🔹 Main method
     public static void main(String[] args) {
-
-        if (args.length != 3) {
-            System.out.println("Usage: java BatchSplitter <input_file> <pipeline_name> <batch_size>");
+        if (args.length != 2) {
+            System.out.println("Usage: java Project.common.BatchSplitter <input_file> <batch_size>");
             return;
         }
 
         String inputFile = args[0];
-        String pipelineName = args[1];
-        int batchSize = Integer.parseInt(args[2]);
+        int batchSize;
+        try {
+            batchSize = Integer.parseInt(args[1]);
+        } catch (NumberFormatException e) {
+            System.out.println("Error: Batch size must be an integer.");
+            return;
+        }
 
-        splitFile(inputFile, pipelineName, batchSize);
+        splitFile(inputFile, batchSize);
     }
 }

@@ -1,0 +1,3 @@
+burger.letters.com - - [01/Jul/1995:00:00:11 -0400] "GET /shuttle/countdown/liftoff.html HTTP/1.0" 304 0
+d104.aa.net - - [01/Jul/1995:00:00:13 -0400] "GET /shuttle/countdown/ HTTP/1.0" 200 3985
+198.209.49.201 - - [01/Jul/1995:01:26:18 -0400] "GET /images/NASA-logosmall.gif HTTP/1.0" 200 -

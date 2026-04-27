@@ -19,7 +19,7 @@ import static com.mongodb.client.model.Sorts.*;
 
 public class Q3Mongo {
 
-    public static void run(String filePath) {
+    public static void run(String filePath, int runId) {
 
         long startTime = System.currentTimeMillis();
         int malformedCount = 0;
@@ -61,7 +61,9 @@ public class Q3Mongo {
                 recordCount++;
             }
 
-            collection.insertMany(docs);
+            if (!docs.isEmpty()) {
+                collection.insertMany(docs);
+            }
 
             // 🔷 STEP 2: Aggregation Pipeline
             List<Bson> pipeline = Arrays.asList(
@@ -129,12 +131,7 @@ public class Q3Mongo {
             // 🔷 STEP 3: Execute aggregation
             AggregateIterable<Document> result = collection.aggregate(pipeline);
 
-            // 🔷 STEP 4: Register Run in SQL (Initial entry to get runId)
-            int runId = MetadataDAO.insertRunMetadata("mongodb", 1, recordCount, recordCount, 0, malformedCount);
-
-            // 🔷 STEP 5: Save output to file and SQL
-            PrintWriter writer = new PrintWriter(new FileWriter("mongo_q3_output.txt"));
-
+            // 🔷 STEP 4: Save Results to SQL
             for (Document doc : result) {
                 String date = doc.getString("logDate");
                 int hour = Integer.parseInt(doc.getString("logHour"));
@@ -145,21 +142,17 @@ public class Q3Mongo {
                                 ((Double)doc.get("errorRate")).doubleValue();
                 long distinctErrHosts = doc.getInteger("distinctErrorHosts").longValue();
 
-                writer.println(date + "\t" + hour + "\t" + errCount + "\t" + totalCount + "\t" + errRate + "\t" + distinctErrHosts);
-                
                 // Save to SQL
                 Q3DAO.saveResult(runId, date, hour, errCount, totalCount, errRate, distinctErrHosts);
+                System.out.println(doc.toJson()); // Print to console for verification
             }
 
-            writer.close();
-
-            // 🔷 STEP 6: Final Timing and Runtime Update
+            // 🔷 STEP 5: Final Timing and Runtime Update
             long endTime = System.currentTimeMillis();
             double totalRuntimeSec = (endTime - startTime) / 1000.0;
-            MetadataDAO.updateRuntime(runId, totalRuntimeSec);
+            MetadataDAO.updateFinalStats(runId, totalRuntimeSec, malformedCount);
 
-            System.out.println("Output saved to mongo_q3_output.txt");
-            System.out.println("Total Pipeline Runtime: " + (endTime - startTime) + " ms");
+            System.out.println("\nTotal Pipeline Runtime: " + (endTime - startTime) + " ms");
             System.out.println("SQL Run ID: " + runId);
 
         } catch (Exception e) {
@@ -170,11 +163,12 @@ public class Q3Mongo {
     // 🔷 MAIN METHOD
     public static void main(String[] args) {
 
-        if (args.length == 0) {
-            System.out.println("Provide input file path");
+        if (args.length < 2) {
+            System.out.println("Usage: java Q3Mongo <input_file_path> <run_id>");
             return;
         }
 
-        run(args[0]);
+        run(args[0], Integer.parseInt(args[1]));
     }
 }
+

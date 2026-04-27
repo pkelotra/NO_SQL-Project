@@ -1,0 +1,3 @@
+ix-mhl-ca1-18.ix.netcom.com - - [01/Jul/1995:01:26:27 -0400] "GET /shuttle/missions/sts-71/mission-sts-71.html HTTP/1.0" 200 12040
+dynamic176-24.ip.portal.com - - [01/Jul/1995:01:26:28 -0400] "GET /images/kscmap-tiny.gif HTTP/1.0" 200 2537
+port26.annex2.nwlink.com - - [01/Jul/1995:00:01:27 -0400] "GET /images/MOSAIC-logosmall.gif HTTP/1.0" 200 363

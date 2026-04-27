@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS run_metadata (
     avg_batch_size FLOAT,
     runtime FLOAT,
     malformed_record_count INTEGER,
+    dataset_name VARCHAR(255),
     run_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

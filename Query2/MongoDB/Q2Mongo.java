@@ -19,7 +19,7 @@ import static com.mongodb.client.model.Sorts.*;
 
 public class Q2Mongo {
 
-    public static void run(String filePath) {
+    public static void run(String filePath, int runId) {
 
         long startTime = System.currentTimeMillis();
         int malformedCount = 0;
@@ -61,7 +61,9 @@ public class Q2Mongo {
                 recordCount++;
             }
 
-            collection.insertMany(docs);
+            if (!docs.isEmpty()) {
+                collection.insertMany(docs);
+            }
 
             // 🔷 STEP 2: Aggregation Pipeline
             List<Bson> pipeline = Arrays.asList(
@@ -93,12 +95,7 @@ public class Q2Mongo {
             // 🔷 STEP 3: Execute aggregation
             AggregateIterable<Document> result = collection.aggregate(pipeline);
 
-            // 🔷 STEP 4: Register Run in SQL (Initial entry to get runId)
-            int runId = MetadataDAO.insertRunMetadata("mongodb", 1, recordCount, recordCount, 0, malformedCount);
-
-            // 🔷 STEP 5: Save output to file and SQL
-            PrintWriter writer = new PrintWriter(new FileWriter("mongo_q2_output.txt"));
-
+            // 🔷 STEP 4: Save Results to SQL
             for (Document doc : result) {
                 String resource = doc.getString("resource");
                 long reqCount = doc.getInteger("requestCount").longValue();
@@ -107,21 +104,17 @@ public class Q2Mongo {
                                  ((Long)doc.get("totalBytes")).longValue();
                 long distinctHosts = doc.getInteger("distinctHosts").longValue();
 
-                writer.println(resource + "\t" + reqCount + "\t" + totalBytes + "\t" + distinctHosts);
-                
                 // Save to SQL
                 Q2DAO.saveResult(runId, resource, reqCount, totalBytes, distinctHosts);
+                System.out.println(doc.toJson()); // Print to console for verification
             }
 
-            writer.close();
-
-            // 🔷 STEP 6: Final Timing and Runtime Update
+            // 🔷 STEP 5: Final Timing and Runtime Update
             long endTime = System.currentTimeMillis();
             double totalRuntimeSec = (endTime - startTime) / 1000.0;
-            MetadataDAO.updateRuntime(runId, totalRuntimeSec);
+            MetadataDAO.updateFinalStats(runId, totalRuntimeSec, malformedCount);
 
-            System.out.println("Output saved to mongo_q2_output.txt");
-            System.out.println("Total Pipeline Runtime: " + (endTime - startTime) + " ms");
+            System.out.println("\nTotal Pipeline Runtime: " + (endTime - startTime) + " ms");
             System.out.println("SQL Run ID: " + runId);
 
         } catch (Exception e) {
@@ -132,11 +125,11 @@ public class Q2Mongo {
     // 🔷 MAIN METHOD
     public static void main(String[] args) {
 
-        if (args.length == 0) {
-            System.out.println("Provide input file path");
+        if (args.length < 2) {
+            System.out.println("Usage: java Q2Mongo <input_file_path> <run_id>");
             return;
         }
 
-        run(args[0]);
+        run(args[0], Integer.parseInt(args[1]));
     }
 }

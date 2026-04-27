@@ -1,0 +1,2 @@
+netport-27.iu.net - - [01/Jul/1995:00:02:01 -0400] "GET /images/USA-logosmall.gif HTTP/1.0" 304 0
+smyth-pc.moorecap.com - - [01/Jul/1995:00:02:02 -0400] "GET /history/apollo/images/footprint-small.gif HTTP/1.0" 200 18149

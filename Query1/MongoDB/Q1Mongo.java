@@ -22,15 +22,15 @@ import static com.mongodb.client.model.Filters.*;
 public class Q1Mongo {
 
     public static void main(String[] args) {
-        if (args.length == 0) {
-            System.out.println("Provide input file path");
+        if (args.length < 2) {
+            System.out.println("Usage: java Q1Mongo <input_file_path> <run_id>");
             return;
         }
 
-        run(args[0]);
+        run(args[0], Integer.parseInt(args[1]));
     }
 
-    public static void run(String filePath) {
+    public static void run(String filePath, int runId) {
 
         long startTime = System.currentTimeMillis();
         int malformedCount = 0;
@@ -72,7 +72,9 @@ public class Q1Mongo {
                 recordCount++;
             }
 
-            collection.insertMany(batchDocs);
+            if (!batchDocs.isEmpty()) {
+                collection.insertMany(batchDocs);
+            }
 
             // 🔷 STEP 2: Aggregation
             List<Bson> pipeline = Arrays.asList(
@@ -86,10 +88,7 @@ public class Q1Mongo {
 
             AggregateIterable<Document> result = collection.aggregate(pipeline);
 
-            // 🔷 STEP 3: Register Run in SQL (Initial entry to get runId)
-            int runId = MetadataDAO.insertRunMetadata("mongodb", 1, recordCount, recordCount, 0, malformedCount);
-
-            // 🔷 STEP 4: Save Results to SQL
+            // 🔷 STEP 3: Save Results to SQL
             for (Document doc : result) {
                 Document idDoc = (Document) doc.get("_id");
                 String date = idDoc.getString("date");
@@ -103,10 +102,10 @@ public class Q1Mongo {
                 System.out.println(doc.toJson());
             }
 
-            // 🔷 STEP 5: Final Timing and Runtime Update
+            // 🔷 STEP 4: Final Timing and Runtime Update
             long endTime = System.currentTimeMillis();
             double totalRuntimeSec = (endTime - startTime) / 1000.0;
-            MetadataDAO.updateRuntime(runId, totalRuntimeSec);
+            MetadataDAO.updateFinalStats(runId, totalRuntimeSec, malformedCount);
 
             System.out.println("\nTotal Pipeline Runtime: " + (endTime - startTime) + " ms");
             System.out.println("SQL Run ID: " + runId);

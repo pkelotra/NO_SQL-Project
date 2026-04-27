@@ -1,0 +1,3 @@
+remote27.compusmart.ab.ca - - [01/Jul/1995:00:01:27 -0400] "GET /shuttle/countdown/ HTTP/1.0" 200 3985
+link097.txdirect.net - - [01/Jul/1995:00:01:27 -0400] "GET /images/launchmedium.gif HTTP/1.0" 200 11853
+slip1.yab.com - - [01/Jul/1995:00:01:29 -0400] "GET /shuttle/resources/orbiters/endeavour.gif HTTP/1.0" 200 16991

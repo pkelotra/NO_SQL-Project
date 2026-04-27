@@ -1,0 +1,3 @@
+port26.annex2.nwlink.com - - [01/Jul/1995:00:01:32 -0400] "GET /images/WORLD-logosmall.gif HTTP/1.0" 200 669
+onyx.southwind.net - - [01/Jul/1995:00:01:34 -0400] "GET /shuttle/countdown/countdown.html HTTP/1.0" 200 3985
+onyx.southwind.net - - [01/Jul/1995:00:01:35 -0400] "GET /shuttle/countdown/count.gif HTTP/1.0" 200 40310

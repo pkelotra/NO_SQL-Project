@@ -68,8 +68,7 @@ public class HourlyErrorMR {
                 }
             }
 
-            double errorRate = (totalRequests == 0) ? 0 :
-                    (double) errorRequests / totalRequests;
+            double errorRate = (totalRequests == 0) ? 0 : (double) errorRequests / totalRequests;
 
             String result = errorRequests + "\t" + totalRequests + "\t" +
                     errorRate + "\t" + errorHosts.size();
@@ -81,7 +80,13 @@ public class HourlyErrorMR {
     // 🔹 Driver
     public static void main(String[] args) throws Exception {
 
+        if (args.length < 3) {
+            System.out.println("Usage: hadoop jar <jar> <class> <input> <output> <run_id>");
+            System.exit(1);
+        }
+
         long startTime = System.currentTimeMillis();
+        int runId = Integer.parseInt(args[2]);
 
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "Hourly Error Analysis");
@@ -101,22 +106,20 @@ public class HourlyErrorMR {
         FileOutputFormat.setOutputPath(job, outputPath);
 
         // Delete output directory if it exists
-        FileSystem fs = FileSystem.get(conf);
+        FileSystem fs = FileSystem.get(outputPath.toUri(), conf);
         if (fs.exists(outputPath)) {
             fs.delete(outputPath, true);
         }
 
         boolean success = job.waitForCompletion(true);
-        if (!success) System.exit(1);
+        if (!success)
+            System.exit(1);
 
         // 🔷 STEP 1: Get Job Metrics
         long validRecords = job.getCounters().findCounter("LOG", "VALID_RECORDS").getValue();
         long malformedRecords = job.getCounters().findCounter("LOG", "MALFORMED").getValue();
 
-        // 🔷 STEP 2: Register Run in SQL (Placeholder runtime)
-        int runId = MetadataDAO.insertRunMetadata("mapreduce", 1, (int)validRecords, (int)validRecords, 0, (int)malformedRecords);
-
-        // 🔷 STEP 3: Load Results from HDFS to SQL
+        // 🔷 STEP 2: Load Results from HDFS to SQL
         FileStatus[] statuses = fs.listStatus(outputPath);
         for (FileStatus status : statuses) {
             String fileName = status.getPath().getName();
@@ -139,10 +142,15 @@ public class HourlyErrorMR {
             }
         }
 
-        // 🔷 STEP 4: Final Timing
+        // 🔷 STEP 4: Cleanup - Delete temporary output folder
+        if (fs.exists(outputPath)) {
+            fs.delete(outputPath, true);
+            System.out.println("Temporary output folder deleted.");
+        }
+        // 🔷 STEP 3: Final Timing and SQL Update
         long endTime = System.currentTimeMillis();
         double totalRuntimeSec = (endTime - startTime) / 1000.0;
-        MetadataDAO.updateRuntime(runId, totalRuntimeSec);
+        MetadataDAO.updateFinalStats(runId, totalRuntimeSec, (int) malformedRecords);
 
         System.out.println("\nTotal Pipeline Runtime (MR + SQL): " + (endTime - startTime) + " ms");
         System.out.println("SQL Run ID: " + runId);

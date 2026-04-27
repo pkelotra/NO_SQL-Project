@@ -1,0 +1,3 @@
+link097.txdirect.net - - [01/Jul/1995:00:01:31 -0400] "GET /images/NASA-logosmall.gif HTTP/1.0" 200 786
+link097.txdirect.net - - [01/Jul/1995:00:01:31 -0400] "GET /images/KSC-logosmall.gif HTTP/1.0" 200 1204
+port26.annex2.nwlink.com - - [01/Jul/1995:00:01:32 -0400] "GET /images/USA-logosmall.gif HTTP/1.0" 200 234
