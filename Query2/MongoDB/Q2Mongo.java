@@ -1,0 +1,142 @@
+package Project.Query2.MongoDB;
+
+import Project.common.Parsing.LogParser;
+import Project.common.Parsing.ParsedLog;
+
+import com.mongodb.client.*;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+
+import Project.common.sql.MetadataDAO;
+import Project.common.sql.Q2DAO;
+
+import java.io.*;
+import java.util.*;
+
+import static com.mongodb.client.model.Accumulators.*;
+import static com.mongodb.client.model.Aggregates.*;
+import static com.mongodb.client.model.Sorts.*;
+
+public class Q2Mongo {
+
+    public static void run(String filePath) {
+
+        long startTime = System.currentTimeMillis();
+        int malformedCount = 0;
+        int recordCount = 0;
+
+        try (MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017")) {
+
+            MongoDatabase db = mongoClient.getDatabase("logDB");
+            MongoCollection<Document> collection = db.getCollection("logs");
+
+            collection.drop(); // clear previous batch
+
+            // 🔷 STEP 1: Read + Parse + Insert
+            BufferedReader br = new BufferedReader(new FileReader(filePath));
+
+            String line;
+            List<Document> docs = new ArrayList<>();
+
+            while ((line = br.readLine()) != null) {
+
+                ParsedLog log = LogParser.parse(line);
+
+                if (log == null) {
+                    malformedCount++;
+                    continue;
+                }
+
+                Document doc = new Document()
+                        .append("host", log.host)
+                        .append("logDate", log.logDate)
+                        .append("logHour", log.logHour)
+                        .append("method", log.method)
+                        .append("resource", log.resource)
+                        .append("protocol", log.protocol)
+                        .append("status", log.statusCode)
+                        .append("bytes", log.bytes);
+
+                docs.add(doc);
+                recordCount++;
+            }
+
+            collection.insertMany(docs);
+
+            // 🔷 STEP 2: Aggregation Pipeline
+            List<Bson> pipeline = Arrays.asList(
+
+                    // group by resource
+                    group("$resource",
+                            sum("requestCount", 1),
+                            sum("totalBytes", "$bytes"),
+                            addToSet("hosts", "$host")
+                    ),
+
+                    // project required fields
+                    new Document("$project",
+                            new Document("resource", "$_id")
+                                    .append("requestCount", 1)
+                                    .append("totalBytes", 1)
+                                    .append("distinctHosts",
+                                            new Document("$size", "$hosts"))
+                                    .append("_id", 0)
+                    ),
+
+                    // sort by request count descending
+                    sort(descending("requestCount")),
+
+                    // limit to top 20
+                    limit(20)
+            );
+
+            // 🔷 STEP 3: Execute aggregation
+            AggregateIterable<Document> result = collection.aggregate(pipeline);
+
+            // 🔷 STEP 4: Register Run in SQL (Initial entry to get runId)
+            int runId = MetadataDAO.insertRunMetadata("mongodb", 1, recordCount, recordCount, 0, malformedCount);
+
+            // 🔷 STEP 5: Save output to file and SQL
+            PrintWriter writer = new PrintWriter(new FileWriter("mongo_q2_output.txt"));
+
+            for (Document doc : result) {
+                String resource = doc.getString("resource");
+                long reqCount = doc.getInteger("requestCount").longValue();
+                long totalBytes = doc.get("totalBytes") instanceof Integer ? 
+                                 ((Integer)doc.get("totalBytes")).longValue() : 
+                                 ((Long)doc.get("totalBytes")).longValue();
+                long distinctHosts = doc.getInteger("distinctHosts").longValue();
+
+                writer.println(resource + "\t" + reqCount + "\t" + totalBytes + "\t" + distinctHosts);
+                
+                // Save to SQL
+                Q2DAO.saveResult(runId, resource, reqCount, totalBytes, distinctHosts);
+            }
+
+            writer.close();
+
+            // 🔷 STEP 6: Final Timing and Runtime Update
+            long endTime = System.currentTimeMillis();
+            double totalRuntimeSec = (endTime - startTime) / 1000.0;
+            MetadataDAO.updateRuntime(runId, totalRuntimeSec);
+
+            System.out.println("Output saved to mongo_q2_output.txt");
+            System.out.println("Total Pipeline Runtime: " + (endTime - startTime) + " ms");
+            System.out.println("SQL Run ID: " + runId);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 🔷 MAIN METHOD
+    public static void main(String[] args) {
+
+        if (args.length == 0) {
+            System.out.println("Provide input file path");
+            return;
+        }
+
+        run(args[0]);
+    }
+}
