@@ -200,6 +200,8 @@
 
 \vspace*{1.5cm}
 \begin{center}
+  {\fontsize{11}{14}\selectfont\color{white}\textbf{DAS 839 --- NoSQL Systems \quad|\quad End Semester Project}}\\[5pt]
+  {\fontsize{9}{12}\selectfont\color{AccentCyan!70!white} Phase 1 Report}
 
   \vspace{2.5cm}
 
@@ -234,14 +236,6 @@
     \textcolor{HiveYellow}{\textbf{Hive}}\quad
     \textcolor{PigPink}{\textbf{Pig}}
   }
-
-  \vspace{1.2cm}
-  \begin{tikzpicture}
-    \node[draw=AccentCyan!80, fill=LightBg, thick, rounded corners=5pt, inner xsep=12pt, inner ysep=8pt, font=\small, drop shadow={fill=black!10, opacity=0.4, shadow xshift=1.5pt, shadow yshift=-1.5pt}] {
-      \textbf{\color{PrimaryBlue}GitHub Repository:}\quad 
-      \href{https://github.com/pkelotra/NO_SQL-Project}{\color{AccentTeal}\texttt{github.com/pkelotra/NO\_SQL-Project}}
-    };
-  \end{tikzpicture}
 \end{center}
 
 \vfill
@@ -301,23 +295,23 @@ The framework is designed as a \textbf{unified, end-to-end ETL and reporting too
 
 % Pipeline row
 \node[block, fill=MRBlue!12, draw=MRBlue, text=MRBlue!90!black,
-      minimum width=2.2cm, below=1cm of etl, xshift=-3.825cm] (mr)
+      minimum width=2.2cm, below=0.8cm of etl, xshift=-3.825cm] (mr)
       {\textbf{MapReduce}\\\scriptsize Hadoop};
       
 \node[block, fill=MongoGreen!12, draw=MongoGreen, text=MongoGreen!90!black,
-      minimum width=2.2cm, below=1cm of etl, xshift=-1.275cm] (mg)
+      minimum width=2.2cm, below=0.8cm of etl, xshift=-1.275cm] (mg)
       {\textbf{MongoDB}\\\scriptsize Aggregation};
       
 \node[block, fill=HiveYellow!15, draw=HiveYellow, text=HiveYellow!80!black,
-      minimum width=2.2cm, below=1cm of etl, xshift=1.275cm] (hive)
+      minimum width=2.2cm, below=0.8cm of etl, xshift=1.275cm] (hive)
       {\textbf{Hive}\\\scriptsize HiveQL};
       
 \node[block, fill=PigPink!10, draw=PigPink, text=PigPink!90!black,
-      minimum width=2.2cm, below=1cm of etl, xshift=3.825cm] (pig)
+      minimum width=2.2cm, below=0.8cm of etl, xshift=3.825cm] (pig)
       {\textbf{Pig}\\\scriptsize Latin Script};
 
 % Aggregation label - Fixed the color/font error here
-\node[text=AccentOrange, font=\scriptsize\bfseries, below=0.1cm of etl,xshift=2cm]
+\node[text=AccentOrange, font=\scriptsize\bfseries, below=0.1cm of etl]
       {Aggregation Layer};
 
 % DB Node
@@ -334,10 +328,10 @@ The framework is designed as a \textbf{unified, end-to-end ETL and reporting too
 
 % Arrows
 \draw[arr] (ui) -- (etl) node[lbl, midway, right=2pt] {user inputs};
-\draw[arr] (etl.south) -- ++(0,-0.7) -| (mr.north);
-\draw[arr] (etl.south) -- ++(0,-0.7) -| (mg.north);
-\draw[arr] (etl.south) -- ++(0,-0.7) -| (hive.north);
-\draw[arr] (etl.south) -- ++(0,-0.7) -| (pig.north);
+\draw[arr] (etl.south) -- ++(0,-0.28) -| (mr.north);
+\draw[arr] (etl.south) -- ++(0,-0.28) -| (mg.north);
+\draw[arr] (etl.south) -- ++(0,-0.28) -| (hive.north);
+\draw[arr] (etl.south) -- ++(0,-0.28) -| (pig.north);
 \draw[arr] (mr.south) -- (db.north -| mr.south);
 \draw[arr] (mg.south) -- (db.north -| mg.south);
 \draw[arr] (hive.south) -- (db.north -| hive.south);
@@ -739,61 +733,138 @@ The parsing rules, cleaning rules, field definitions, query definitions, and out
 
 Each pipeline executes the same three analytical queries using a different processing paradigm. All four implement equivalent semantics: the same parsing rules, cleaning rules, filtering conditions, grouping logic, and aggregation definitions.
 
-\subsection{MapReduce}
 \begin{mrbox}
 \textbf{Paradigm:} Low-level, programmer-controlled parallel computation on HDFS.
 
-\textbf{Execution Model:} 
-\begin{itemize}
-  \item \textbf{Mapper:} Reads raw HDFS splits and applies \texttt{LogParser.java}. Valid records emit composite \texttt{Text} keys (e.g., date \& hour) and values (e.g., status \& host). It tracks data quality dynamically using Hadoop Counters (\texttt{MALFORMED} vs \texttt{VALID\_RECORDS}).
-  \item \textbf{Reducer:} Aggregates grouped keys iteratively. For example, \texttt{HourlyErrorMR} loops through values to count total requests, isolate errors (status 400--599), and uses a Java \texttt{HashSet} for distinct host tracking before calculating the final error rate.
-  \item \textbf{Driver:} Configures the job, triggers execution, reads the final HDFS \texttt{part-*} output files sequentially using a \texttt{BufferedReader}, and commits the aggregated results to PostgreSQL via DAOs (e.g., \texttt{Q3DAO.saveResult()}) before cleaning up the temporary HDFS directory.
-\end{itemize}
+\textbf{Execution model:} Custom Mapper and Reducer classes. The Mapper applies the master regex to each log line and emits typed key--value pairs. The Reducer aggregates values per key (e.g., summing bytes, counting requests, collecting distinct hosts).
+
+\textbf{Characteristics:} Fine-grained control over the map phase, shuffle/sort, and reduce phase. Hadoop's \texttt{InputSplit} mechanism naturally partitions data into processing chunks that correspond to logical batches.
+
+\textbf{Query implementation:} Each of the three queries is a separate MapReduce job. Jobs are chained by the orchestrator, and results are loaded to SQL at the end of each chain.
 \end{mrbox}
 
 \vspace{5pt}
 
-\subsection{MongoDB}
 \begin{mongobox}
 \textbf{Paradigm:} Document-oriented NoSQL with a declarative aggregation framework.
 
-\textbf{Execution Model:}
-\begin{itemize}
-  \item \textbf{Ingestion:} The driver uses a \texttt{BufferedReader} to process the local file line-by-line via \texttt{LogParser.java}. Valid lines are converted into BSON \texttt{Document} objects and loaded into the database using an efficient \texttt{collection.insertMany()} bulk operation.
-  \item \textbf{Aggregation:} Queries are executed via the MongoDB Java Driver's declarative aggregation pipeline (\texttt{collection.aggregate()}). For example, \texttt{Q1Mongo} uses \texttt{Aggregates.group()} combined with \texttt{Accumulators.sum()} to compute request counts and total bytes directly within the database engine.
-  \item \textbf{Result Extraction:} An \texttt{AggregateIterable<Document>} cursor iterates over the computed BSON outputs, extracts the metrics, and delegates permanent storage to PostgreSQL via DAOs (e.g., \texttt{Q1DAO.saveResult()}).
-\end{itemize}
+\textbf{Execution model:} Parsed log records are inserted as BSON documents into a collection. Queries are expressed using the MongoDB Aggregation Pipeline: \texttt{\$match} for filtering, \texttt{\$group} for aggregation, \texttt{\$sort} and \texttt{\$limit} for top-$N$ ranking.
+
+\textbf{Characteristics:} Schema-flexible; easy to express the three queries in a concise, declarative style. Data is inserted in configurable-size chunks (batches) tracked by batch ID.
 \end{mongobox}
 
 \vspace{5pt}
 
-\subsection{Hive}
 \begin{hivebox}
 \textbf{Paradigm:} SQL-like query language (HiveQL) over Hadoop.
 
-\textbf{Execution Model:} 
-\textit{[To be updated based on Hive implementation]}
-\begin{itemize}
-  \item \textbf{Ingestion:} \dots
-  \item \textbf{Aggregation:} \dots
-  \item \textbf{Result Extraction:} \dots
-\end{itemize}
+\textbf{Execution model:} The log file is loaded into an external Hive table backed by the raw text. Queries are written as standard \texttt{SELECT ... GROUP BY ...} HiveQL statements. Hive compiles these internally into MapReduce or Tez jobs.
+
+\textbf{Characteristics:} The three mandatory queries map almost directly to SQL, making Hive the most concise implementation. Partitioning or chunk-based loading is used to emulate batching.
 \end{hivebox}
 
 \vspace{5pt}
 
-\subsection{Pig}
 \begin{pigbox}
 \textbf{Paradigm:} Dataflow scripting language (Pig Latin) that compiles to MapReduce.
 
-\textbf{Execution Model:} 
-\textit{[To be updated based on Pig implementation]}
-\begin{itemize}
-  \item \textbf{Ingestion:} \dots
-  \item \textbf{Aggregation:} \dots
-  \item \textbf{Result Extraction:} \dots
-\end{itemize}
+\textbf{Execution model:} A Pig Latin script loads the data, applies a custom UDF or regex-based \texttt{LOAD} function for parsing, then uses \texttt{FILTER}, \texttt{GROUP}, and \texttt{FOREACH ... GENERATE} to compute the required aggregations.
+
+\textbf{Characteristics:} Step-by-step, explicit transformation pipeline. Each data transformation is visible as a named Pig relation, making the logic easy to audit and debug.
 \end{pigbox}
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  SECTION 5 — BATCHING APPROACH
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Batching Approach}
+
+\subsection{Definition}
+
+\begin{tcolorbox}[basebox, colback=LightBg, colframe=AccentCyan,
+                  title={Batch Definition}]
+\textbf{Batch} = a fixed number of input log records processed together in one execution unit.
+
+\begin{itemize}
+  \item \textbf{Batch size} --- configurable integer supplied by the user via the UI (e.g.\ 10\,000 records).
+  \item \textbf{Batch ID} --- sequential integer starting from \textbf{1}, incrementing by 1 for each subsequent batch.
+  \item \textbf{Final batch} --- if the last group contains fewer records than the configured batch size, it is still counted as a valid batch and given the next sequential ID.
+\end{itemize}
+\end{tcolorbox}
+
+The \textbf{average batch size} is reported as:
+\[
+  \overline{\text{batch size}} \;=\;
+  \frac{\text{total records processed}}{\text{number of non-empty batches}}
+\]
+
+\subsection{Pipeline-Specific Batching}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\linewidth}{@{} >{\bfseries\small}l X @{}}
+\toprule
+Pipeline & Batching mechanism \\
+\midrule
+MapReduce &
+  Hadoop's \texttt{NLineInputFormat} is configured so that each InputSplit contains exactly \emph{N} lines, where \emph{N} equals the chosen batch size. Each InputSplit is processed by one Mapper, constituting one logical batch. \\[3pt]
+MongoDB &
+  Parsed records are inserted via \texttt{insert\_many()} in Python list chunks of size $= $ batch size. Each \texttt{insert\_many()} call represents one batch; \texttt{batch\_id} is tracked and stored per chunk in the metadata table. \\[3pt]
+Hive &
+  The orchestrator splits the raw log file into chunk files, each containing exactly \emph{batch\_size} lines. Chunk files are loaded sequentially into the Hive table, and each load operation is assigned a sequential \texttt{batch\_id}. \\[3pt]
+Pig &
+  Pre-split chunk files (produced by the orchestrator) are passed to Pig runs sequentially. Each Pig execution processes one chunk, corresponding to one batch. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Batch Processing Diagram}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.5cm and 0.5cm,
+  box/.style={rectangle, rounded corners=3pt, draw, thick,
+              minimum width=2.3cm, minimum height=0.72cm,
+              text centered, font=\small},
+  arr/.style={-{Stealth}, thick, MidGray},
+]
+
+\node[box, fill=PrimaryBlue!12, draw=PrimaryBlue, minimum width=3.5cm] (input)
+  {Input Log File};
+
+\node[box, fill=AccentCyan!12, draw=AccentCyan!70,
+      below right=0.7cm and -1.8cm of input] (b1)
+  {Batch 1\\{\tiny records 1--N}};
+\node[box, fill=AccentCyan!12, draw=AccentCyan!70,
+      right=0.4cm of b1] (b2)
+  {Batch 2\\{\tiny records N+1--2N}};
+\node[box, fill=AccentCyan!12, draw=AccentCyan!70,
+      right=0.4cm of b2] (b3)
+  {Batch 3\\{\tiny records 2N+1--3N}};
+\node[font=\large\color{MidGray}, right=0.3cm of b3] (dots) {\ldots};
+\node[box, fill=AccentOrange!12, draw=AccentOrange,
+      right=0.3cm of dots] (bn)
+  {Batch $k$\\{\tiny (last batch)}};
+
+\node[box, fill=SuccessGreen!12, draw=SuccessGreen,
+      below=0.9cm of b2, xshift=1.7cm, minimum width=5.5cm,
+      minimum height=0.85cm] (agg)
+  {\textbf{Aggregation \& SQL Store}};
+
+\draw[arr] (input.south) -- ++(0,-0.32) -| (b1.north);
+\draw[arr] (input.south) -- ++(0,-0.32) -| (b2.north);
+\draw[arr] (input.south) -- ++(0,-0.32) -| (b3.north);
+\draw[arr] (input.south) -- ++(0,-0.32) -| (bn.north);
+
+\draw[arr] (b1.south) |- (agg.west);
+\draw[arr] (b2.south) -- (agg.north -| b2.south);
+\draw[arr] (b3.south) |- (agg);
+\draw[arr] (bn.south) |- (agg.east);
+
+\end{tikzpicture}
+\caption{Batch processing: input is partitioned into $k$ equal batches; the final batch may contain fewer than $N$ records}
+\label{fig:batch}
+\end{figure}
 
 % ══════════════════════════════════════════════════════════════════════════════
 %  SECTION 6 — RELATIONAL DATABASE SCHEMA
@@ -812,13 +883,11 @@ The schema separates run-level metadata from query results. One metadata table s
 \textnormal{\textbf{Column}} & \textbf{Type} & \textbf{Description} \\
 \midrule
 run\_id              & SERIAL PK    & Auto-incremented unique identifier for each run \\
-pipeline\_name       & VARCHAR(20)  & Execution engine (e.g., \texttt{mapreduce}, \texttt{mongodb}) \\
+pipeline\_name       & VARCHAR(20)  & One of: \texttt{mapreduce}, \texttt{mongodb}, \texttt{hive}, \texttt{pig} \\
 batch\_id            & INTEGER      & Sequential batch identifier (starts at 1) \\
 batch\_size          & INTEGER      & Configured number of records per batch \\
-avg\_batch\_size     & FLOAT        & Calculated average batch size across the dataset \\
-runtime              & FLOAT        & Wall-clock time in seconds (ETL only) \\
+runtime              & FLOAT        & Wall-clock time in seconds (ETL only; excludes report time) \\
 malformed\_record\_count & INTEGER  & Number of log lines that failed regex parsing \\
-dataset\_name        & VARCHAR      & The name or path of the selected dataset \\
 timestamp            & TIMESTAMP    & UTC datetime when the run was recorded \\
 \bottomrule
 \end{tabularx}
