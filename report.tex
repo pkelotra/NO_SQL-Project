@@ -859,6 +859,7 @@ resource\_path     & TEXT       & Requested URL path \\
 request\_count     & BIGINT     & Number of times this resource was requested \\
 total\_bytes       & BIGINT     & Total bytes served for this resource \\
 distinct\_host\_count & BIGINT  & Number of unique hosts requesting this resource \\
+hosts\_list        & TEXT       & Comma-separated list of host IP addresses \\
 \bottomrule
 \end{tabularx}
 \end{schematable}
@@ -880,6 +881,7 @@ error\_request\_count  & BIGINT     & Requests with status code 400--599 \\
 total\_request\_count  & BIGINT     & All requests in this date--hour slot \\
 error\_rate           & FLOAT      & \texttt{error\_request\_count / total\_request\_count} \\
 distinct\_error\_hosts & BIGINT     & Unique hosts generating error responses \\
+hosts\_list           & TEXT       & Comma-separated list of host IP addresses \\
 \bottomrule
 \end{tabularx}
 \end{schematable}

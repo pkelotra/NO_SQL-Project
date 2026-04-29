@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS top_resources (
     resource_path TEXT,
     request_count BIGINT,
     total_bytes BIGINT,
-    distinct_host_count BIGINT
+    distinct_host_count BIGINT,
+    hosts_list TEXT
 );
 
 -- 4. Hourly Error Analysis (Query 3)
@@ -43,5 +44,6 @@ CREATE TABLE IF NOT EXISTS hourly_errors (
     error_request_count BIGINT,
     total_request_count BIGINT,
     error_rate FLOAT,
-    distinct_error_hosts BIGINT
+    distinct_error_hosts BIGINT,
+    hosts_list TEXT
 );

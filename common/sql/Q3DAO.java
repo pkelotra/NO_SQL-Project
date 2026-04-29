@@ -12,9 +12,9 @@ public class Q3DAO {
      * Saves a Query 3 result record to the database.
      */
     public static void saveResult(int runId, String dateStr, int hour, long errorCount, 
-                                 long totalCount, double errorRate, long distinctErrorHosts) {
-        String sql = "INSERT INTO hourly_errors (run_id, log_date, log_hour, error_request_count, total_request_count, error_rate, distinct_error_hosts) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                                 long totalCount, double errorRate, long distinctErrorHosts, String hostsList) {
+        String sql = "INSERT INTO hourly_errors (run_id, log_date, log_hour, error_request_count, total_request_count, error_rate, distinct_error_hosts, hosts_list) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -34,6 +34,7 @@ public class Q3DAO {
             pstmt.setLong(5, totalCount);
             pstmt.setDouble(6, errorRate);
             pstmt.setLong(7, distinctErrorHosts);
+            pstmt.setString(8, hostsList);
             
             pstmt.executeUpdate();
         } catch (SQLException e) {

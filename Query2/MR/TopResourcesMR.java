@@ -65,7 +65,8 @@ public class TopResourcesMR {
                 uniqueHosts.add(host);
             }
 
-            String result = count + "\t" + totalBytes + "\t" + uniqueHosts.size();
+            String hostsListStr = String.join(",", uniqueHosts);
+            String result = count + "\t" + totalBytes + "\t" + uniqueHosts.size() + "\t" + hostsListStr;
 
             resultMap.put(key.toString(), result);
         }
@@ -142,12 +143,13 @@ public class TopResourcesMR {
                 String line;
                 while ((line = br.readLine()) != null) {
                     String[] parts = line.split("\t");
-                    if (parts.length >= 4) { // resource, count, bytes, hosts
+                    if (parts.length >= 5) { // resource, count, bytes, hosts, hostsList
                         String resource = parts[0];
                         long count = Long.parseLong(parts[1]);
                         long bytes = Long.parseLong(parts[2]);
                         long hosts = Long.parseLong(parts[3]);
-                        Q2DAO.saveResult(runId, resource, count, bytes, hosts);
+                        String hostsList = parts[4];
+                        Q2DAO.saveResult(runId, resource, count, bytes, hosts, hostsList);
                     }
                 }
                 br.close();

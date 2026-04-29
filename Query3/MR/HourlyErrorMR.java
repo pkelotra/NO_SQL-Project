@@ -70,8 +70,9 @@ public class HourlyErrorMR {
 
             double errorRate = (totalRequests == 0) ? 0 : (double) errorRequests / totalRequests;
 
+            String hostsListStr = String.join(",", errorHosts);
             String result = errorRequests + "\t" + totalRequests + "\t" +
-                    errorRate + "\t" + errorHosts.size();
+                    errorRate + "\t" + errorHosts.size() + "\t" + hostsListStr;
 
             context.write(key, new Text(result));
         }
@@ -128,14 +129,15 @@ public class HourlyErrorMR {
                 String line;
                 while ((line = br.readLine()) != null) {
                     String[] parts = line.split("\t");
-                    if (parts.length >= 6) { // date, hour, errorCount, totalCount, errorRate, hosts
+                    if (parts.length >= 7) { // date, hour, errorCount, totalCount, errorRate, hosts, hostsList
                         String date = parts[0];
                         int hour = Integer.parseInt(parts[1]);
                         long errorCount = Long.parseLong(parts[2]);
                         long totalCount = Long.parseLong(parts[3]);
                         double errorRate = Double.parseDouble(parts[4]);
                         long hosts = Long.parseLong(parts[5]);
-                        Q3DAO.saveResult(runId, date, hour, errorCount, totalCount, errorRate, hosts);
+                        String hostsList = parts[6];
+                        Q3DAO.saveResult(runId, date, hour, errorCount, totalCount, errorRate, hosts, hostsList);
                     }
                 }
                 br.close();
