@@ -3,6 +3,7 @@
 -- 1. Metadata Table
 CREATE TABLE IF NOT EXISTS run_metadata (
     run_id SERIAL PRIMARY KEY,
+    execution_id INTEGER NOT NULL,
     pipeline_name VARCHAR(20) NOT NULL, -- mapreduce, mongodb, hive, pig
     batch_id INTEGER NOT NULL,
     batch_size INTEGER NOT NULL,

@@ -812,6 +812,7 @@ The schema separates run-level metadata from query results. One metadata table s
 \textnormal{\textbf{Column}} & \textbf{Type} & \textbf{Description} \\
 \midrule
 run\_id              & SERIAL PK    & Auto-incremented unique identifier for each run \\
+execution\_id        & INTEGER      & Identifier grouping batches of one full pipeline run \\
 pipeline\_name       & VARCHAR(20)  & Execution engine (e.g., \texttt{mapreduce}, \texttt{mongodb}) \\
 batch\_id            & INTEGER      & Sequential batch identifier (starts at 1) \\
 batch\_size          & INTEGER      & Configured number of records per batch \\
