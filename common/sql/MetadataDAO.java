@@ -10,22 +10,43 @@ public class MetadataDAO {
     /**
      * Inserts run metadata and returns the generated run_id.
      */
-    public static int insertRunMetadata(String pipelineName, int batchId, int batchSize,
+    /**
+     * Gets the next execution_id for a new full pipeline run.
+     */
+    public static int getNextExecutionId() {
+        String sql = "SELECT COALESCE(MAX(execution_id), 0) + 1 FROM run_metadata";
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting next execution_id: " + e.getMessage());
+        }
+        return 1;
+    }
+
+    /**
+     * Inserts run metadata and returns the generated run_id.
+     */
+    public static int insertRunMetadata(int executionId, String pipelineName, int batchId, int batchSize,
             double avgBatchSize, double runtime, int malformedCount, String datasetName) {
-        String sql = "INSERT INTO run_metadata (pipeline_name, batch_id, batch_size, avg_batch_size, runtime, malformed_record_count, dataset_name) "
+        String sql = "INSERT INTO run_metadata (execution_id, pipeline_name, batch_id, batch_size, avg_batch_size, runtime, malformed_record_count, dataset_name) "
                 +
-                "VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING run_id";
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING run_id";
 
         try (Connection conn = DBConnection.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, pipelineName);
-            pstmt.setInt(2, batchId);
-            pstmt.setInt(3, batchSize);
-            pstmt.setDouble(4, avgBatchSize);
-            pstmt.setDouble(5, runtime);
-            pstmt.setInt(6, malformedCount);
-            pstmt.setString(7, datasetName);
+            pstmt.setInt(1, executionId);
+            pstmt.setString(2, pipelineName);
+            pstmt.setInt(3, batchId);
+            pstmt.setInt(4, batchSize);
+            pstmt.setDouble(5, avgBatchSize);
+            pstmt.setDouble(6, runtime);
+            pstmt.setInt(7, malformedCount);
+            pstmt.setString(8, datasetName);
 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {

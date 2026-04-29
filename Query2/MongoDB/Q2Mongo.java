@@ -80,6 +80,7 @@ public class Q2Mongo {
                             new Document("resource", "$_id")
                                     .append("requestCount", 1)
                                     .append("totalBytes", 1)
+                                    .append("hosts", 1)
                                     .append("distinctHosts",
                                             new Document("$size", "$hosts"))
                                     .append("_id", 0)
@@ -103,9 +104,12 @@ public class Q2Mongo {
                                  ((Integer)doc.get("totalBytes")).longValue() : 
                                  ((Long)doc.get("totalBytes")).longValue();
                 long distinctHosts = doc.getInteger("distinctHosts").longValue();
+                
+                List<String> hostsArray = doc.getList("hosts", String.class);
+                String hostsList = String.join(",", hostsArray);
 
                 // Save to SQL
-                Q2DAO.saveResult(runId, resource, reqCount, totalBytes, distinctHosts);
+                Q2DAO.saveResult(runId, resource, reqCount, totalBytes, distinctHosts, hostsList);
                 System.out.println(doc.toJson()); // Print to console for verification
             }
 

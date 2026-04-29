@@ -83,6 +83,9 @@ public class PipelineRunner {
         System.out.printf("Average Batch Size: %.2f\n", avgBatchSize);
 
         System.out.println("\n--- Starting Pipeline Execution (All Queries) ---");
+        int executionId = MetadataDAO.getNextExecutionId();
+        System.out.println("Execution ID for this full run: " + executionId);
+
         for (File batchFile : batchFiles) {
             String fileName = batchFile.getName();
             System.out.println("\nProcessing Batch: " + fileName);
@@ -97,7 +100,7 @@ public class PipelineRunner {
                 currentBatchSize = Integer.parseInt(fileName.substring(underscoreIndex + 1, dotIndex));
             } catch (Exception e) {}
 
-            int runId = MetadataDAO.insertRunMetadata(engineName.toLowerCase(), batchId, currentBatchSize, avgBatchSize, 0, 0,
+            int runId = MetadataDAO.insertRunMetadata(executionId, engineName.toLowerCase(), batchId, currentBatchSize, avgBatchSize, 0, 0,
                     selectedFolder.getName());
             if (runId == -1) continue;
 

@@ -124,6 +124,16 @@ public class Q3Mongo {
                                                     )
                                             )
                                     )
+                                    .append("filteredErrorHosts",
+                                            new Document("$filter",
+                                                    new Document("input", "$errorHosts")
+                                                            .append("as", "h")
+                                                            .append("cond",
+                                                                    new Document("$ne",
+                                                                            Arrays.asList("$$h", null))
+                                                            )
+                                            )
+                                    )
                                     .append("_id", 0)
                     )
             );
@@ -142,8 +152,11 @@ public class Q3Mongo {
                                 ((Double)doc.get("errorRate")).doubleValue();
                 long distinctErrHosts = doc.getInteger("distinctErrorHosts").longValue();
 
+                List<String> hostsArray = doc.getList("filteredErrorHosts", String.class);
+                String hostsList = hostsArray != null ? String.join(",", hostsArray) : "";
+
                 // Save to SQL
-                Q3DAO.saveResult(runId, date, hour, errCount, totalCount, errRate, distinctErrHosts);
+                Q3DAO.saveResult(runId, date, hour, errCount, totalCount, errRate, distinctErrHosts, hostsList);
                 System.out.println(doc.toJson()); // Print to console for verification
             }
 
