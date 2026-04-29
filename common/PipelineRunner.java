@@ -16,34 +16,50 @@ public class PipelineRunner {
             return;
         }
 
-        // 1. Select Folder
-        File[] folders = datasetDir.listFiles(File::isDirectory);
-        if (folders == null || folders.length == 0) {
-            System.out.println("No batch folders found in " + datasetPath);
-            return;
-        }
+        File selectedFolder = null;
+        String engineName = null;
+        String classSuffix = null;
 
-        System.out.println("Available Batch Folders:");
-        for (int i = 0; i < folders.length; i++) {
-            System.out.println("[" + (i + 1) + "] " + folders[i].getName());
-        }
+        if (args.length >= 2) {
+            // Headless Mode (from Frontend)
+            String selectedFolderName = args[0];
+            selectedFolder = new File(datasetDir, selectedFolderName);
+            if (!selectedFolder.exists() || !selectedFolder.isDirectory()) {
+                System.out.println("Error: Dataset folder not found: " + selectedFolderName);
+                return;
+            }
+            engineName = args[1].equalsIgnoreCase("MongoDB") ? "MongoDB" : "MR";
+            classSuffix = engineName.equals("MongoDB") ? "Mongo" : "MR";
+        } else {
+            // Interactive Mode (CLI)
+            File[] folders = datasetDir.listFiles(File::isDirectory);
+            if (folders == null || folders.length == 0) {
+                System.out.println("No batch folders found in " + datasetPath);
+                return;
+            }
 
-        System.out.print("Select a folder (index): ");
-        int folderIndex = scanner.nextInt() - 1;
-        if (folderIndex < 0 || folderIndex >= folders.length) {
-            System.out.println("Invalid selection.");
-            return;
-        }
-        File selectedFolder = folders[folderIndex];
+            System.out.println("Available Batch Folders:");
+            for (int i = 0; i < folders.length; i++) {
+                System.out.println("[" + (i + 1) + "] " + folders[i].getName());
+            }
 
-        // 2. Select Engine
-        System.out.println("\nSelect Processing Engine:");
-        System.out.println("[1] MongoDB");
-        System.out.println("[2] MR (MapReduce)");
-        System.out.print("Choice: ");
-        int engineChoice = scanner.nextInt();
-        String engineName = (engineChoice == 1) ? "MongoDB" : "MR";
-        String classSuffix = (engineChoice == 1) ? "Mongo" : "MR";
+            System.out.print("Select a folder (index): ");
+            int folderIndex = scanner.nextInt() - 1;
+            if (folderIndex < 0 || folderIndex >= folders.length) {
+                System.out.println("Invalid selection.");
+                return;
+            }
+            selectedFolder = folders[folderIndex];
+
+            // 2. Select Engine
+            System.out.println("\nSelect Processing Engine:");
+            System.out.println("[1] MongoDB");
+            System.out.println("[2] MR (MapReduce)");
+            System.out.print("Choice: ");
+            int engineChoice = scanner.nextInt();
+            engineName = (engineChoice == 1) ? "MongoDB" : "MR";
+            classSuffix = (engineChoice == 1) ? "Mongo" : "MR";
+        }
 
         // 3. Compile Everything Once (Automatic)
         System.out.println("\n--- Running Maven Compile ---");
@@ -85,6 +101,11 @@ public class PipelineRunner {
         System.out.println("\n--- Starting Pipeline Execution (All Queries) ---");
         int executionId = MetadataDAO.getNextExecutionId();
         System.out.println("Execution ID for this full run: " + executionId);
+        
+        // Save execution ID for the UI/Analyzer to pick up
+        try (PrintWriter out = new PrintWriter(".latest_execution_id")) {
+            out.println(executionId);
+        } catch (Exception e) {}
 
         for (File batchFile : batchFiles) {
             String fileName = batchFile.getName();
@@ -153,7 +174,12 @@ public class PipelineRunner {
 
     private static void runCommand(String command) {
         try {
-            Process process = new ProcessBuilder("bash", "-c", command).redirectErrorStream(true).start();
+            ProcessBuilder pb = new ProcessBuilder("bash", "-c", command);
+            pb.redirectErrorStream(true);
+            // Redirect input from /dev/null to prevent the terminal from suspending the process (SIGTTIN)
+            pb.redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
+            
+            Process process = pb.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {

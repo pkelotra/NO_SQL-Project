@@ -1,75 +1,179 @@
-<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NASA Log Analytics | ETL Pipeline</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="background-blobs">
-        <div class="blob shape-1"></div>
-        <div class="blob shape-2"></div>
+
+    <!-- Animated Background -->
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb orb-4"></div>
     </div>
+    <div class="grid-overlay"></div>
 
     <main class="container">
+
+        <!-- Header -->
         <header class="header">
-            <h1>NASA Log Analytics</h1>
-            <p>Unified Big Data ETL & Reporting Framework</p>
+            <div class="header-badge">ETL FRAMEWORK v2.0</div>
+            <h1 class="title">
+                <span class="title-line1">NASA Log</span>
+                <span class="title-line2">Analytics</span>
+            </h1>
+            <p class="subtitle">Unified Big Data Pipeline &mdash; MapReduce &bull; MongoDB &bull; Hive &bull; Pig</p>
+            <div class="title-underline"></div>
         </header>
 
-        <section class="glass-panel">
-            <form id="pipelineForm">
-                
-                <div class="form-group">
-                    <label for="method">Select Pipeline Method</label>
-                    <select id="method" name="method" required>
-                        <option value="" disabled selected>Choose a processing engine...</option>
-                        <optgroup label="Hadoop MapReduce">
-                            <option value="MR_Q1">Query 1: Daily Traffic</option>
-                            <option value="MR_Q2">Query 2: Top Resources</option>
-                            <option value="MR_Q3">Query 3: Hourly Errors</option>
-                        </optgroup>
-                        <optgroup label="MongoDB">
-                            <option value="Mongo_Q1">Query 1: Daily Traffic</option>
-                            <option value="Mongo_Q2">Query 2: Top Resources</option>
-                            <option value="Mongo_Q3">Query 3: Hourly Errors</option>
-                        </optgroup>
-                    </select>
+        <!-- Control Panel Card -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-dots">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
                 </div>
-
-                <div class="form-group">
-                    <label for="batchSize">Batch Size <span class="badge">Optional</span></label>
-                    <input type="number" id="batchSize" name="batchSize" placeholder="e.g., 1000" min="1">
-                    <small>Used for chunked processing (Saved for future backend integration).</small>
+                <span class="panel-title">Pipeline Control Panel</span>
+                <div class="panel-status">
+                    <span class="status-dot"></span> Online
                 </div>
+            </div>
 
+            <form id="pipelineForm" class="form">
+
+                <!-- Pipeline Selector -->
                 <div class="form-group">
-                    <label>Upload Log File (.txt)</label>
-                    <div class="file-drop-area" id="fileDropArea">
-                        <span class="file-msg">Drag & Drop your log file here or click to browse</span>
-                        <input type="file" id="logfile" name="logfile" accept=".txt" required>
+                    <label class="form-label">Select Pipeline Engine</label>
+                    <p class="form-hint">Choose exactly one processing system</p>
+                    <div class="pipeline-grid">
+                        <label class="pipeline-chip" data-value="MapReduce" style="--chip-color: #f97316;">
+                            <input type="radio" name="pipelineEngine" value="MapReduce">
+                            <div class="chip-inner">
+                                <span class="chip-icon">⚡</span>
+                                <span class="chip-name">MapReduce</span>
+                            </div>
+                        </label>
+                        <label class="pipeline-chip" data-value="MongoDB" style="--chip-color: #22c55e;">
+                            <input type="radio" name="pipelineEngine" value="MongoDB">
+                            <div class="chip-inner">
+                                <span class="chip-icon">🍃</span>
+                                <span class="chip-name">MongoDB</span>
+                            </div>
+                        </label>
+                        <label class="pipeline-chip" data-value="Hive" style="--chip-color: #eab308;">
+                            <input type="radio" name="pipelineEngine" value="Hive">
+                            <div class="chip-inner">
+                                <span class="chip-icon">🐝</span>
+                                <span class="chip-name">Hive</span>
+                            </div>
+                        </label>
+                        <label class="pipeline-chip" data-value="Pig" style="--chip-color: #ec4899;">
+                            <input type="radio" name="pipelineEngine" value="Pig">
+                            <div class="chip-inner">
+                                <span class="chip-icon">🐷</span>
+                                <span class="chip-name">Pig</span>
+                            </div>
+                        </label>
                     </div>
                 </div>
 
-                <button type="submit" class="submit-btn" id="submitBtn">
-                    <span class="btn-text">Execute Pipeline</span>
-                    <span class="loader hidden" id="loader"></span>
-                </button>
-            </form>
-        </section>
+                <!-- Dataset Mode Toggle -->
+                <div class="form-group">
+                    <label class="form-label">Dataset Input Mode</label>
+                    <div class="toggle-wrapper">
+                        <button type="button" class="toggle-btn active" id="togglePresplit" data-mode="pre_split">
+                            📦 Pre-split Dataset
+                        </button>
+                        <button type="button" class="toggle-btn" id="toggleCustom" data-mode="custom">
+                            🗂️ Custom Upload
+                        </button>
+                    </div>
+                    <input type="hidden" id="datasetModeInput" name="datasetMode" value="pre_split">
+                </div>
 
-        <!-- Results Area -->
-        <section class="results-panel hidden" id="resultsPanel">
-            <h2>Pipeline Results</h2>
-            <div class="result-card" id="resultContent">
-                <!-- Injected via JS -->
+                <!-- Pre-split Section -->
+                <div id="preSplitSection" class="mode-section">
+                    <div class="form-group">
+                        <label class="form-label" for="datasetName">Available Datasets</label>
+                        <div class="select-wrapper">
+                            <select id="datasetName" name="datasetName">
+                                <option value="" disabled selected>Loading datasets...</option>
+                            </select>
+                            <span class="select-arrow">▾</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Upload Section -->
+                <div id="customFileSection" class="mode-section fade-hidden">
+
+                    <div class="form-group">
+                        <label class="form-label" for="batchSize">Batch Size</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">#</span>
+                            <input type="number" id="batchSize" name="batchSize" placeholder="e.g., 10000" min="1">
+                        </div>
+                        <p class="form-hint">Number of records per batch chunk</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Upload Raw Log File</label>
+                        <div class="drop-zone" id="fileDropArea">
+                            <div class="drop-icon">☁️</div>
+                            <p class="drop-title">Drag & Drop your <code>.txt</code> log file</p>
+                            <p class="drop-sub">or click to browse</p>
+                            <div class="drop-badge" id="dropBadge">No file selected</div>
+                            <input type="file" id="logfile" name="logfile" accept=".txt">
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="run-btn" id="submitBtn">
+                    <span class="run-btn-text" id="btnText">
+                        <span class="run-btn-icon">▶</span> Run Pipeline
+                    </span>
+                    <div class="run-btn-loader hidden" id="loader"></div>
+                    <div class="run-btn-glow"></div>
+                </button>
+
+            </form>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="results-panel hidden" id="resultsPanel">
+            <div class="results-header">
+                <h2>🎉 Pipeline Finished</h2>
+                <div class="header-actions">
+                    <button class="action-btn" id="btnViewAnalysis">📊 View Analysis</button>
+                    <button class="action-btn secondary" id="btnReset">🔄 Run New</button>
+                </div>
             </div>
-        </section>
+            <div class="results-grid" id="resultContent">
+                <!-- Status metrics injected via JS -->
+            </div>
+            
+            <!-- Analysis Chart Display -->
+            <div id="analysisContainer" class="analysis-container hidden">
+                <div class="analysis-divider"></div>
+                <h3>Data Quality Distribution</h3>
+                <div class="chart-wrapper">
+                    <img id="qualityChart" src="" alt="Analysis Chart">
+                </div>
+            </div>
+        </div>
+
 
     </main>
+
     <script src="app.js"></script>
 </body>
 </html>
