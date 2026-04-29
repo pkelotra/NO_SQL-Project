@@ -29,10 +29,12 @@ public class RunMetadataAnalyzer {
      * the comparative analysis against other pipelines using the same dataset.
      */
     public static void analyzeRun(int executionId) {
-        String datasetName = printPrimaryRunDetails(executionId);
+        String[] meta = printPrimaryRunDetails(executionId);
 
-        if (datasetName != null) {
-            printComparativeAnalysis(datasetName);
+        if (meta != null) {
+            String datasetName = meta[0];
+            String pipelineName = meta[1];
+            printComparativeAnalysis(datasetName, pipelineName);
         } else {
             System.out.println("Error: Could not find execution_id " + executionId + " in the database.");
         }
@@ -40,9 +42,9 @@ public class RunMetadataAnalyzer {
 
     /**
      * Queries PostgreSQL for the target execution's aggregated metadata and prints it neatly.
-     * Returns the dataset_name so it can be used for the comparative query.
+     * Returns a string array [dataset_name, pipeline_name] so it can be used for the comparative query.
      */
-    private static String printPrimaryRunDetails(int executionId) {
+    private static String[] printPrimaryRunDetails(int executionId) {
         String sql = "SELECT pipeline_name, dataset_name, " +
                      "COUNT(batch_id) AS total_batches, " +
                      "AVG(avg_batch_size) AS average_batch_size, " +
@@ -53,6 +55,7 @@ public class RunMetadataAnalyzer {
                      "GROUP BY pipeline_name, dataset_name";
 
         String datasetName = null;
+        String pipelineName = null;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -61,7 +64,7 @@ public class RunMetadataAnalyzer {
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                String pipeline = rs.getString("pipeline_name");
+                pipelineName = rs.getString("pipeline_name");
                 datasetName = rs.getString("dataset_name");
                 int totalBatches = rs.getInt("total_batches");
                 double avgBatchSize = rs.getDouble("average_batch_size");
@@ -72,7 +75,7 @@ public class RunMetadataAnalyzer {
                 System.out.println("              TARGET RUN ANALYSIS                 ");
                 System.out.println("==================================================");
                 System.out.printf("Execution ID:       %d%n", executionId);
-                System.out.printf("Pipeline:           %s%n", pipeline.toUpperCase());
+                System.out.printf("Pipeline:           %s%n", pipelineName.toUpperCase());
                 System.out.printf("Dataset:            %s%n", datasetName);
                 System.out.printf("Total Batches:      %d%n", totalBatches);
                 System.out.printf("Average Batch Size: %.2f%n", avgBatchSize);
@@ -84,14 +87,17 @@ public class RunMetadataAnalyzer {
             System.err.println("Database error while fetching primary run details: " + e.getMessage());
         }
 
-        return datasetName;
+        if (datasetName != null && pipelineName != null) {
+            return new String[]{datasetName, pipelineName};
+        }
+        return null;
     }
 
     /**
      * Aggregates batches by execution_id and finds the fastest full execution 
-     * (minimum total runtime) for each pipeline that processed the given dataset.
+     * (minimum total runtime) for each OTHER pipeline that processed the given dataset.
      */
-    private static void printComparativeAnalysis(String datasetName) {
+    private static void printComparativeAnalysis(String datasetName, String currentPipeline) {
         String sql = "WITH ExecutionStats AS (" +
                      "    SELECT execution_id, pipeline_name, " +
                      "           COUNT(batch_id) AS total_batches, " +
@@ -99,7 +105,7 @@ public class RunMetadataAnalyzer {
                      "           SUM(runtime) AS total_runtime, " +
                      "           SUM(malformed_record_count) AS total_malformed " +
                      "    FROM run_metadata " +
-                     "    WHERE dataset_name = ? " +
+                     "    WHERE dataset_name = ? AND pipeline_name != ? " +
                      "    GROUP BY execution_id, pipeline_name " +
                      ") " +
                      "SELECT DISTINCT ON (pipeline_name) " +
@@ -109,7 +115,7 @@ public class RunMetadataAnalyzer {
 
         System.out.println("=================================================================================================");
         System.out.println("                               COMPARATIVE PIPELINE PERFORMANCE                                  ");
-        System.out.println("                          (Fastest full execution per pipeline on same dataset)                  ");
+        System.out.println("                     (Fastest full execution per OTHER pipeline on same dataset)                 ");
         System.out.println("=================================================================================================");
         System.out.printf("%-15s | %-12s | %-13s | %-15s | %-15s | %-10s%n", 
                           "Pipeline", "Execution ID", "Total Batches", "Avg Batch Size", "Total Runtime", "Malformed");
@@ -119,6 +125,7 @@ public class RunMetadataAnalyzer {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, datasetName);
+            pstmt.setString(2, currentPipeline);
             ResultSet rs = pstmt.executeQuery();
 
             boolean found = false;

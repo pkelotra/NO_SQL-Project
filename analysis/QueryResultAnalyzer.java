@@ -23,18 +23,22 @@ public class QueryResultAnalyzer {
     }
 
     public static void analyzeRun(int executionId) {
-        String datasetName = getDatasetName(executionId);
+        String[] meta = getDatasetName(executionId);
 
-        if (datasetName == null) {
+        if (meta == null) {
             System.out.println("Error: Could not find execution_id " + executionId + " in the database.");
             return;
         }
+
+        String datasetName = meta[0];
+        String pipelineName = meta[1];
 
         System.out.println("===============================================================================================================");
         System.out.println("                                      PRIMARY RUN QUERY RESULTS                                                ");
         System.out.println("===============================================================================================================");
         System.out.println("Execution ID: " + executionId);
         System.out.println("Dataset: " + datasetName);
+        System.out.println("Pipeline: " + pipelineName.toUpperCase());
         System.out.println("---------------------------------------------------------------------------------------------------------------");
         
         printQ1Primary(executionId);
@@ -47,17 +51,17 @@ public class QueryResultAnalyzer {
         System.out.println("Dataset: " + datasetName);
         System.out.println("---------------------------------------------------------------------------------------------------------------");
         
-        printComparativeAnalysis(datasetName);
+        printComparativeAnalysis(datasetName, pipelineName);
     }
 
-    private static String getDatasetName(int executionId) {
-        String sql = "SELECT dataset_name FROM run_metadata WHERE execution_id = ? LIMIT 1";
+    private static String[] getDatasetName(int executionId) {
+        String sql = "SELECT dataset_name, pipeline_name FROM run_metadata WHERE execution_id = ? LIMIT 1";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, executionId);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                return rs.getString("dataset_name");
+                return new String[]{rs.getString("dataset_name"), rs.getString("pipeline_name")};
             }
         } catch (SQLException e) {
             System.err.println("Error fetching dataset name: " + e.getMessage());
@@ -177,11 +181,11 @@ public class QueryResultAnalyzer {
 
     // --- COMPARATIVE RUN DETAILS ---
 
-    private static void printComparativeAnalysis(String datasetName) {
-        // Find the fastest execution_id for each pipeline on this dataset
+    private static void printComparativeAnalysis(String datasetName, String currentPipeline) {
+        // Find the fastest execution_id for each OTHER pipeline on this dataset
         String getFastestSql = "WITH ExecutionStats AS (" +
                                "    SELECT execution_id, pipeline_name, SUM(runtime) AS total_runtime " +
-                               "    FROM run_metadata WHERE dataset_name = ? " +
+                               "    FROM run_metadata WHERE dataset_name = ? AND pipeline_name != ? " +
                                "    GROUP BY execution_id, pipeline_name " +
                                ") " +
                                "SELECT DISTINCT ON (pipeline_name) pipeline_name, execution_id " +
@@ -191,6 +195,7 @@ public class QueryResultAnalyzer {
              PreparedStatement pstmt = conn.prepareStatement(getFastestSql)) {
             
             pstmt.setString(1, datasetName);
+            pstmt.setString(2, currentPipeline);
             ResultSet rs = pstmt.executeQuery();
 
             boolean hasPipelines = false;
