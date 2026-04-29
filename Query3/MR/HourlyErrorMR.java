@@ -128,7 +128,7 @@ public class HourlyErrorMR {
                 BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(status.getPath())));
                 String line;
                 while ((line = br.readLine()) != null) {
-                    String[] parts = line.split("\t");
+                    String[] parts = line.split("\t", -1); // -1 prevents discarding empty trailing strings
                     if (parts.length >= 7) { // date, hour, errorCount, totalCount, errorRate, hosts, hostsList
                         String date = parts[0];
                         int hour = Integer.parseInt(parts[1]);

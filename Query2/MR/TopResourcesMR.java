@@ -142,7 +142,7 @@ public class TopResourcesMR {
                 BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(status.getPath())));
                 String line;
                 while ((line = br.readLine()) != null) {
-                    String[] parts = line.split("\t");
+                    String[] parts = line.split("\t", -1);
                     if (parts.length >= 5) { // resource, count, bytes, hosts, hostsList
                         String resource = parts[0];
                         long count = Long.parseLong(parts[1]);
