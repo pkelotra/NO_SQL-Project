@@ -1,0 +1,75 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASA Log Analytics | ETL Pipeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob shape-1"></div>
+        <div class="blob shape-2"></div>
+    </div>
+
+    <main class="container">
+        <header class="header">
+            <h1>NASA Log Analytics</h1>
+            <p>Unified Big Data ETL & Reporting Framework</p>
+        </header>
+
+        <section class="glass-panel">
+            <form id="pipelineForm">
+                
+                <div class="form-group">
+                    <label for="method">Select Pipeline Method</label>
+                    <select id="method" name="method" required>
+                        <option value="" disabled selected>Choose a processing engine...</option>
+                        <optgroup label="Hadoop MapReduce">
+                            <option value="MR_Q1">Query 1: Daily Traffic</option>
+                            <option value="MR_Q2">Query 2: Top Resources</option>
+                            <option value="MR_Q3">Query 3: Hourly Errors</option>
+                        </optgroup>
+                        <optgroup label="MongoDB">
+                            <option value="Mongo_Q1">Query 1: Daily Traffic</option>
+                            <option value="Mongo_Q2">Query 2: Top Resources</option>
+                            <option value="Mongo_Q3">Query 3: Hourly Errors</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="batchSize">Batch Size <span class="badge">Optional</span></label>
+                    <input type="number" id="batchSize" name="batchSize" placeholder="e.g., 1000" min="1">
+                    <small>Used for chunked processing (Saved for future backend integration).</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Upload Log File (.txt)</label>
+                    <div class="file-drop-area" id="fileDropArea">
+                        <span class="file-msg">Drag & Drop your log file here or click to browse</span>
+                        <input type="file" id="logfile" name="logfile" accept=".txt" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span class="btn-text">Execute Pipeline</span>
+                    <span class="loader hidden" id="loader"></span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Results Area -->
+        <section class="results-panel hidden" id="resultsPanel">
+            <h2>Pipeline Results</h2>
+            <div class="result-card" id="resultContent">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
